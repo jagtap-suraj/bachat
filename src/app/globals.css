@@ -121,3 +121,53 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .gradient {
+    background-image: linear-gradient(to bottom right, #3b82f6, #9333ea);
+  }
+  .gradient-title {
+    background-image: linear-gradient(to bottom right, #3b82f6, #9333ea);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Add a 3D perspective to the image container */
+.hero-image-wrapper {
+  perspective: 1000px; /* Makes the image look 3D */
+}
+
+/* Style for the image container */
+.hero-image {
+  transform: rotateX(15deg) scale(1); /* Tilt the image slightly (15 degrees) */
+  transition: transform 0.5s ease-out; /* Smoothly animate the transform effect */
+  will-change: transform; /* Optimize performance for the transform effect */
+}
+
+/* Style for the image container when the user scrolls down */
+.hero-image.scrolled {
+  transform: rotateX(0deg) scale(1) translateY(40px); /* Remove the tilt and move the image down */
+}
+
+/* Define a gradient animation */
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%; /* Start position of the gradient */
+  }
+  50% {
+    background-position: 100% 50%; /* Middle position of the gradient */
+  }
+  100% {
+    background-position: 0% 50%; /* End position of the gradient */
+  }
+}
+
+/* Apply the gradient animation to an element */
+.animate-gradient {
+  background-size: 200% 200%; /* Make the gradient larger than the element */
+  animation: gradientMove 3s ease infinite; /* Run the gradient animation forever */
+}
