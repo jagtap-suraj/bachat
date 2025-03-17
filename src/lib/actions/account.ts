@@ -27,30 +27,6 @@ export const getUserAccountsFromDb = async (userId: string) => {
   });
 };
 
-// export const setDefaultAccount = async (
-//   userId: string,
-//   shouldBeDefault: boolean,
-//   accountId?: string
-// ) => {
-//   if (!shouldBeDefault || !accountId) return; // No need to change anything
-
-//   // Log inputs for debugging
-//   console.log("accountId:", accountId);
-//   console.log("userId:", userId);
-
-//   // Unset previous default account
-//   await db.account.updateMany({
-//     where: { userId, NOT: { id: accountId } },
-//     data: { isDefault: false },
-//   });
-
-//   // Set new default account
-//   return await db.account.update({
-//     where: { id: accountId, userId },
-//     data: { isDefault: true },
-//   });
-// };
-
 export const setDefaultAccount = async (
   userId: string,
   shouldBeDefault: boolean,
@@ -99,26 +75,34 @@ export async function toggleDefaultAccount(accountId: string) {
 }
 
 export async function getAccountWithTransactions(accountId: string) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  try {
+    const user = await getUserFromAuth();
+    const account = await db.account.findUnique({
+      where: { id: accountId, userId: user.id },
+      include: {
+        transactions: { orderBy: { date: "desc" } },
+        _count: { select: { transactions: true } },
+      },
+    });
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
+    if (!account) throw new Error("Account not found");
 
-  if (!user) throw new Error("User not found");
-
-  const account = db.account.findUnique({
-    where: { id: accountId, userId: user.id },
-    include: {
-      transactions: { orderBy: { date: "desc" } },
-      _count: { select: { transactions: true } },
-    },
-  });
-
-  if (!account) throw new Error("Account not found");
-
-  return account;
+    /**
+     * Serialization note:
+     *
+     * `serialize` returns Promises, so `map(serialize)` creates an array of Promises.
+     * Components can't access Promise properties directly.
+     *
+     * Solution: Use `await Promise.all(array.map(serialize))` to resolve all Promises
+     * before returning data to components.
+     */
+    return {
+      ...(await serialize(account)),
+      transactions: await Promise.all(account.transactions.map(serialize)),
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }
 
 /**
@@ -196,9 +180,66 @@ export async function getUserAccounts() {
       accounts.map(async (account) => await serialize(account))
     );
   } catch (error) {
-    console.error("Error fetching accounts:", error);
-    throw new Error(
-      "Unable to retrieve accounts at this time. Please try again later."
+    return { success: false, error: error.message };
+  }
+}
+
+export async function bulkDeleteTransactions(transactionIds: string[]) {
+  try {
+    const user = await getUserFromAuth();
+
+    // Get transactions to calculate balance changes
+    const transactions = await db.transaction.findMany({
+      where: {
+        id: { in: transactionIds },
+        userId: user.id,
+      },
+    });
+
+    // Group transactions by account to update balances
+    const accountBalanceChanges = transactions.reduce(
+      (acc: Record<string, number>, transaction) => {
+        const change =
+          transaction.type === "EXPENSE"
+            ? transaction.amount
+            : -transaction.amount;
+        acc[transaction.accountId] =
+          (acc[transaction.accountId] || 0) + Number(change);
+        return acc;
+      },
+      {}
     );
+
+    // Delete transactions and update account balances in a transaction
+    await db.$transaction(async (tx) => {
+      // Delete transactions
+      await tx.transaction.deleteMany({
+        where: {
+          id: { in: transactionIds },
+          userId: user.id,
+        },
+      });
+
+      // Update account balances
+      for (const [accountId, balanceChange] of Object.entries(
+        accountBalanceChanges
+      )) {
+        await tx.account.update({
+          where: { id: accountId },
+          data: {
+            balance: {
+              increment: balanceChange,
+            },
+          },
+        });
+      }
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/account/[id]");
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 }
