@@ -4,7 +4,12 @@ import { AccountType } from "@/types/account";
 export const accountSchema = z.object({
   name: z.string().min(1, "Name is required"),
   type: z.nativeEnum(AccountType),
-  balance: z.string().min(1, "Initial balance is required"),
+  balance: z
+    .string()
+    .min(1, "Initial balance is required")
+    .refine((val) => parseFloat(val) > 0, {
+      message: "Balance must be greater than 0",
+    }),
   isDefault: z.boolean().default(false),
 });
 

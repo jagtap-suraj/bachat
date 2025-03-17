@@ -26,7 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { accountSchema } from "@/lib/zodSchemas";
 import { Account, AccountType } from "@/types/account";
 import useFetch from "@/hooks/useFetch";
-import { createAccount } from "@/lib/actions/dashboard";
+import { createAccount } from "@/lib/actions/account";
 
 /**
  * Workflow Explanation:

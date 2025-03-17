@@ -1,7 +1,7 @@
 import { AccountCard } from "@/components/AccountCard";
 import { CreateAccountDrawer } from "@/components/CreateAccountDrawer";
 import { Card, CardContent } from "@/components/ui/card";
-import { getUserAccounts } from "@/lib/actions/dashboard";
+import { getUserAccounts } from "@/lib/actions/account";
 import { Plus } from "lucide-react";
 import React from "react";
 

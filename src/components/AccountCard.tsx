@@ -14,8 +14,8 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
-import { updateDefaultAccount } from "@/lib/actions/account";
 import { Account } from "@/types/account";
+import { toggleDefaultAccount } from "@/lib/actions/account";
 
 export function AccountCard({ account }: { account: Account }) {
   const { name, type, balance, id, isDefault } = account;
@@ -25,7 +25,7 @@ export function AccountCard({ account }: { account: Account }) {
     fn: updateDefaultFn,
     data: updatedAccount,
     error,
-  } = useFetch(updateDefaultAccount);
+  } = useFetch(toggleDefaultAccount);
 
   const handleDefaultChange = async (event: React.MouseEvent) => {
     event.preventDefault(); // Prevent navigation
