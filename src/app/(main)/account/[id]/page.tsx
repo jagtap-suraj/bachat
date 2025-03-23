@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getAccountWithTransactions } from "@/lib/actions/account";
 import { Account } from "@/types/account";
 import TransactionTable from "@/components/TransactionTable";
+import AccountChart from "@/components/AccountChart";
 
 export default async function AccountPage({
   params,
@@ -51,7 +52,7 @@ export default async function AccountPage({
       <Suspense
         fallback={<BarLoader className="mt-4" width={"100%"} color="#9333ea" />}
       >
-        {/* <AccountChart transactions={transactions} /> */}
+        <AccountChart transactions={transactions} />
       </Suspense>
 
       {/* Transactions Table */}

@@ -57,11 +57,7 @@ import { createAccount } from "@/lib/actions/account";
  *    - If `error` is set (failure):
  *      - An error toast is displayed.
  */
-export function CreateAccountDrawer({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const CreateAccountDrawer = ({ children }: { children: React.ReactNode }) => {
   const [open, setOpen] = useState(false);
   const {
     register,
@@ -228,4 +224,6 @@ export function CreateAccountDrawer({
       </DrawerContent>
     </Drawer>
   );
-}
+};
+
+export default CreateAccountDrawer;

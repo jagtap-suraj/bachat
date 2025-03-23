@@ -11,6 +11,7 @@ import Link from "next/link"; // Import the Link component from Next.js for clie
  * - As we scroll down, the image straightens out and moves down a bit, creating a cool effect.
  */
 const HeroSection = () => {
+  interface HeroSectionProps {}
   // Create a reference (imageRef) to track the image container div.
   const imageRef = useRef<HTMLDivElement>(null);
 

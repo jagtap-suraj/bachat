@@ -1,11 +1,11 @@
-import { AccountCard } from "@/components/AccountCard";
-import { CreateAccountDrawer } from "@/components/CreateAccountDrawer";
+import AccountCard from "@/components/AccountCard";
+import CreateAccountDrawer from "@/components/CreateAccountDrawer";
 import { Card, CardContent } from "@/components/ui/card";
 import { getUserAccounts } from "@/lib/actions/account";
 import { Plus } from "lucide-react";
 import React from "react";
 
-const DashboardPage = async () => {
+export default async function DashboardPage() {
   const accounts = await getUserAccounts();
   return (
     <div className="space-y-8">
@@ -21,14 +21,12 @@ const DashboardPage = async () => {
             </CardContent>
           </Card>
         </CreateAccountDrawer>
-        {accounts &&
+        {Array.isArray(accounts) &&
           accounts.length > 0 &&
-          accounts?.map((account) => (
+          accounts.map((account) => (
             <AccountCard key={account.id} account={account} />
           ))}
       </div>
     </div>
   );
-};
-
-export default DashboardPage;
+}

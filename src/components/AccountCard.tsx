@@ -17,7 +17,7 @@ import useFetch from "@/hooks/useFetch";
 import { Account } from "@/types/account";
 import { toggleDefaultAccount } from "@/lib/actions/account";
 
-export function AccountCard({ account }: { account: Account }) {
+const AccountCard = ({ account }: { account: Account }) => {
   const { name, type, balance, id, isDefault } = account;
 
   const {
@@ -84,4 +84,6 @@ export function AccountCard({ account }: { account: Account }) {
       </Link>
     </Card>
   );
-}
+};
+
+export default AccountCard;
