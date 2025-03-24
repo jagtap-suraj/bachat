@@ -1,7 +1,6 @@
 "use server";
 
 import { db } from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { getUserFromAuth } from "./auth";
 import { serialize } from "./serialize";
@@ -58,7 +57,7 @@ export const setDefaultAccount = async (
   }
 };
 
-export async function toggleDefaultAccount(accountId: string) {
+export const toggleDefaultAccount = async (accountId: string) => {
   try {
     if (!accountId) throw new Error("Account ID is required");
 
@@ -72,9 +71,9 @@ export async function toggleDefaultAccount(accountId: string) {
   } catch (error) {
     return { success: false, error: error.message };
   }
-}
+};
 
-export async function getAccountWithTransactions(accountId: string) {
+export const getAccountWithTransactions = async (accountId: string) => {
   try {
     const user = await getUserFromAuth();
     const account = await db.account.findUnique({
@@ -103,7 +102,7 @@ export async function getAccountWithTransactions(accountId: string) {
   } catch (error) {
     return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * - createAccount is an asynchronous function that handles the logic for creating a new account.
@@ -114,7 +113,7 @@ export async function getAccountWithTransactions(accountId: string) {
  *    - Creating the account in the database.
  *    - It returns a response indicating success or failure.
  */
-export async function createAccount(data: Account) {
+export const createAccount = async (data: Account) => {
   try {
     const user = await getUserFromAuth();
     const balanceFloat = await validateBalance(data.balance);
@@ -169,9 +168,9 @@ export async function createAccount(data: Account) {
       error: error.message || "Failed to create account",
     };
   }
-}
+};
 
-export async function getUserAccounts() {
+export const getUserAccounts = async () => {
   try {
     const user = await getUserFromAuth();
     const accounts = await getUserAccountsFromDb(user.id);
@@ -182,9 +181,9 @@ export async function getUserAccounts() {
   } catch (error) {
     return { success: false, error: error.message };
   }
-}
+};
 
-export async function bulkDeleteTransactions(transactionIds: string[]) {
+export const bulkDeleteTransactions = async (transactionIds: string[]) => {
   try {
     const user = await getUserFromAuth();
 
@@ -242,4 +241,4 @@ export async function bulkDeleteTransactions(transactionIds: string[]) {
   } catch (error) {
     return { success: false, error: error.message };
   }
-}
+};
