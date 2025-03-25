@@ -131,14 +131,16 @@ const BudgetProgress = ({
         {initialBudget && (
           <div className="space-y-2">
             <Progress
-              value={Math.min(percentUsed, 100)}
-              className={`${
-                percentUsed >= 90
-                  ? "bg-red-500"
-                  : percentUsed >= 75
-                  ? "bg-yellow-500"
-                  : "bg-green-500"
-              }`}
+              value={percentUsed}
+              className={`
+                ${
+                  percentUsed >= 90
+                    ? "bg-red-50 [&>[data-slot='progress-indicator']]:bg-red-500"
+                    : percentUsed >= 75
+                    ? "bg-yellow-50 [&>[data-slot='progress-indicator']]:bg-yellow-500"
+                    : "bg-green-50 [&>[data-slot='progress-indicator']]:bg-green-500"
+                }
+              `}
             />
             <p className="text-xs text-muted-foreground text-right">
               {Math.min(percentUsed, 100).toFixed(1)}% used
