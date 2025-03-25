@@ -1,10 +1,9 @@
 "use server";
 
 import { db } from "@/lib/prisma";
-import { Transaction } from "@/types/transaction";
 import { subDays } from "date-fns";
 
-const ACCOUNT_ID = "cfbba115-410d-468b-b4a0-c6c9898a0f8a";
+const ACCOUNT_ID = "0c8486ab-30df-4b7b-977c-73beb97bc689";
 const USER_ID = "7327159c-de90-48db-b270-938b3c199c59";
 
 // Categories with their typical amount ranges
