@@ -11,7 +11,7 @@ import {
   RecurringInterval,
 } from "@/types/transaction";
 import useFetch from "@/hooks/useFetch";
-import { createTransaction } from "@/lib/actions/transaction";
+import { createTransaction, updateTransaction } from "@/lib/actions/transaction";
 import {
   Select,
   SelectContent,
@@ -60,41 +60,52 @@ const AddTransactionForm = ({
     reset,
   } = useForm({
     resolver: zodResolver(transactionSchema),
-    defaultValues: {
-      type: initialData?.type,
-      amount: initialData?.amount?.toString(),
-      description: initialData?.description,
-      accountId: initialData?.accountId,
-      category: initialData?.category,
-      date: initialData?.date ? new Date(initialData.date) : new Date(),
-      isRecurring: initialData?.isRecurring,
-      ...(initialData?.recurringInterval && {
-        recurringInterval: initialData?.recurringInterval,
-      }),
-    },
+    defaultValues:
+      editMode && initialData
+        ? {
+            type: initialData.type,
+            amount: initialData.amount.toString(),
+            description: initialData.description,
+            accountId: initialData.accountId,
+            category: initialData.category,
+            date: new Date(initialData.date),
+            isRecurring: initialData.isRecurring,
+            ...(initialData.recurringInterval && {
+              recurringInterval: initialData.recurringInterval,
+            }),
+          }
+        : {
+            type: "EXPENSE",
+            amount: "",
+            description: "",
+            accountId: accounts.find((ac) => ac.isDefault)?.id,
+            date: new Date(),
+            isRecurring: false,
+          },
   });
 
   const type = watch("type");
   const isRecurring = watch("isRecurring");
   const date = watch("date");
   const category = watch("category");
-  //   const filteredCategories = categories.filter(
-  //     (category) => category.type === type
-  //   );
   const filteredCategories = categories;
 
   const {
     loading: transactionLoading,
     fn: transactionFn,
     data: transactionResult,
-  } = useFetch(createTransaction);
+  } = useFetch(editMode ? updateTransaction : createTransaction);
 
   const onSubmit = (data: any) => {
     const formData = {
       ...data,
       amount: parseFloat(data.amount),
     };
-    transactionFn(formData);
+    if (editMode) {
+      transactionFn(editId, formData);
+    } else {
+      transactionFn(formData);
+    }
   };
 
   useEffect(() => {

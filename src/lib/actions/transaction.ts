@@ -78,6 +78,87 @@ export const createTransaction = async (data: Transaction) => {
   }
 };
 
+export const getTransaction = async (id: string) => {
+  const user = await getUserFromAuth();
+
+  const transaction = await db.transaction.findUnique({
+    where: {
+      id,
+      userId: user.id,
+    },
+  });
+
+  if (!transaction) throw new Error("Transaction not found");
+
+  return await serialize(transaction);
+};
+
+export async function updateTransaction(id: string, data: Transaction) {
+  try {
+    const user = await getUserFromAuth();
+
+    // Get original transaction to calculate balance change
+    const originalTransaction = await db.transaction.findUnique({
+      where: {
+        id,
+        userId: user.id,
+      },
+      include: {
+        account: true,
+      },
+    });
+
+    if (!originalTransaction) throw new Error("Transaction not found");
+
+    // Calculate balance changes
+    const oldBalanceChange =
+      originalTransaction.type === "EXPENSE"
+        ? -originalTransaction.amount.toNumber()
+        : originalTransaction.amount.toNumber();
+
+    const newBalanceChange =
+      data.type === "EXPENSE" ? -Number(data.amount) : Number(data.amount);
+
+    const netBalanceChange = newBalanceChange - oldBalanceChange;
+
+    // Update transaction and account balance in a transaction
+    const transaction = await db.$transaction(async (tx) => {
+      const updated = await tx.transaction.update({
+        where: {
+          id,
+          userId: user.id,
+        },
+        data: {
+          ...data,
+          nextRecurringDate:
+            data.isRecurring && data.recurringInterval
+              ? calculateNextRecurringDate(data.date, data.recurringInterval)
+              : null,
+        },
+      });
+
+      // Update account balance
+      await tx.account.update({
+        where: { id: data.accountId },
+        data: {
+          balance: {
+            increment: netBalanceChange,
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath(`/account/${data.accountId}`);
+
+    return { success: true, data: await serialize(transaction) };
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+
 // Scan Receipt
 export async function scanReceipt(file: File) {
   try {
