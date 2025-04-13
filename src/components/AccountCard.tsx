@@ -1,9 +1,8 @@
 "use client";
 
-import { ArrowUpRight, ArrowDownRight, CreditCard } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -16,9 +15,12 @@ import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { Account } from "@/types/account";
 import { toggleDefaultAccount } from "@/lib/actions/account";
+import { toNumber } from "@/lib/utils";
 
 const AccountCard = ({ account }: { account: Account }) => {
-  const { name, type, balance, id, isDefault } = account;
+  const { name, type, balance, id } = account;
+  // Track isDefault state locally to update UI immediately
+  const [isDefault, setIsDefault] = useState(account.isDefault);
 
   const {
     loading: updateDefaultLoading,
@@ -35,14 +37,23 @@ const AccountCard = ({ account }: { account: Account }) => {
       return; // Don't allow toggling off the default account
     }
 
-    await updateDefaultFn(id);
+    if (id) {
+      await updateDefaultFn(id);
+    }
   };
 
   useEffect(() => {
     if (updatedAccount?.success) {
+      // Update local state to match server state
+      setIsDefault(true);
       toast.success("Default account updated successfully");
     }
   }, [updatedAccount]);
+
+  // Update local state if account prop changes
+  useEffect(() => {
+    setIsDefault(account.isDefault);
+  }, [account.isDefault]);
 
   useEffect(() => {
     if (error) {
@@ -65,7 +76,7 @@ const AccountCard = ({ account }: { account: Account }) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ${parseFloat(balance).toFixed(2)}
+            ${toNumber(balance).toFixed(2)}
           </div>
           <p className="text-xs text-muted-foreground">
             {type.charAt(0) + type.slice(1).toLowerCase()} Account

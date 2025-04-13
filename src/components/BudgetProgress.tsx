@@ -48,7 +48,7 @@ const BudgetProgress = ({
       return;
     }
 
-    await updateBudgetFn(amount);
+    await updateBudgetFn(amount.toString());
   };
 
   const handleCancel = () => {

@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/prisma";
-import { Transaction } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { subDays } from "date-fns";
 
@@ -10,7 +10,7 @@ const USER_ID = "7327159c-de90-48db-b270-938b3c199c59";
 
 export const seedTransactions = async () => {
   try {
-    const transactions: Transaction[] = [
+    const transactions: Prisma.TransactionCreateManyInput[] = [
       {
         id: crypto.randomUUID(),
         type: "EXPENSE",

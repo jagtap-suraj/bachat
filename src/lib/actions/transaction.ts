@@ -1,18 +1,20 @@
 "use server";
 
-import { RecurringInterval, Transaction } from "@/types/transaction";
+import { RecurringInterval, TransactionFormData } from "@/types/transaction";
 import { getUserFromAuth } from "@/lib/actions/auth";
 import { db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { serialize } from "@/lib/actions/serialize";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { defaultCategories } from "@/data/categories";
+import type { Prisma } from "@prisma/client";
+import { createCacheKey, invalidateCache } from "@/lib/cache";
 
 const genAI = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
 
-export const createTransaction = async (data: Transaction) => {
+export const createTransaction = async (data: TransactionFormData) => {
   try {
     const user = await getUserFromAuth();
 
@@ -28,7 +30,6 @@ export const createTransaction = async (data: Transaction) => {
     });
 
     if (!account) {
-      console.error("Account not found for ID:", data.accountId);
       return {
         success: false,
         error: "Account not found",
@@ -40,11 +41,11 @@ export const createTransaction = async (data: Transaction) => {
     const newBalance = account.balance.toNumber() + Number(balanceChange);
 
     // Create transaction and update account balance
-    // Create transaction and update account balance
-    const transaction = await db.$transaction(async (tx) => {
+    const transaction = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const newTransaction = await tx.transaction.create({
         data: {
           ...data,
+          amount: typeof data.amount === 'string' ? parseFloat(data.amount) : data.amount,
           userId: user.id,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
@@ -61,6 +62,10 @@ export const createTransaction = async (data: Transaction) => {
       return newTransaction;
     });
 
+    // Invalidate caches
+    await invalidateCache(createCacheKey(user.id, "accounts"));
+    await invalidateCache(createCacheKey(user.id, "dashboard", { accountId: data.accountId }));
+    
     revalidatePath("/dashboard");
     revalidatePath(`/account/${transaction.accountId}`);
 
@@ -69,7 +74,6 @@ export const createTransaction = async (data: Transaction) => {
       data: await serialize(transaction),
     };
   } catch (error) {
-    console.error("Transaction creation error:", error); // Log the error
     return {
       success: false,
       error:
@@ -93,7 +97,7 @@ export const getTransaction = async (id: string) => {
   return await serialize(transaction);
 };
 
-export async function updateTransaction(id: string, data: Transaction) {
+export async function updateTransaction(id: string, data: TransactionFormData) {
   try {
     const user = await getUserFromAuth();
 
@@ -122,7 +126,7 @@ export async function updateTransaction(id: string, data: Transaction) {
     const netBalanceChange = newBalanceChange - oldBalanceChange;
 
     // Update transaction and account balance in a transaction
-    const transaction = await db.$transaction(async (tx) => {
+    const transaction = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const updated = await tx.transaction.update({
         where: {
           id,
@@ -130,6 +134,7 @@ export async function updateTransaction(id: string, data: Transaction) {
         },
         data: {
           ...data,
+          amount: typeof data.amount === 'string' ? parseFloat(data.amount) : data.amount,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
               ? calculateNextRecurringDate(data.date, data.recurringInterval)
@@ -149,6 +154,15 @@ export async function updateTransaction(id: string, data: Transaction) {
 
       return updated;
     });
+
+    // Invalidate caches
+    await invalidateCache(createCacheKey(user.id, "accounts"));
+    await invalidateCache(createCacheKey(user.id, "dashboard", { accountId: data.accountId }));
+    
+    // If account changed, invalidate old account cache too
+    if (originalTransaction.accountId !== data.accountId) {
+      await invalidateCache(createCacheKey(user.id, "dashboard", { accountId: originalTransaction.accountId }));
+    }
 
     revalidatePath("/dashboard");
     revalidatePath(`/account/${data.accountId}`);
@@ -208,7 +222,6 @@ export async function scanReceipt(file: File) {
 
     try {
       const data = JSON.parse(cleanedText ?? "{}");
-      console.log("Scanned receipt data:", data);
       return {
         type: data.type,
         amount: parseFloat(data.amount),
@@ -217,12 +230,10 @@ export async function scanReceipt(file: File) {
         category: data.category,
         merchantName: data.merchantName,
       };
-    } catch (parseError) {
-      console.error("Error parsing JSON response:", parseError);
+    } catch {
       throw new Error("Invalid response format from Gemini");
     }
-  } catch (error) {
-    console.error("Error scanning receipt:", error);
+  } catch {
     throw new Error("Failed to scan receipt");
   }
 }

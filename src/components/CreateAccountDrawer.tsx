@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { accountSchema } from "@/lib/zodSchemas";
-import { Account, AccountType } from "@/types/account";
+import { Account, AccountType, AccountFormData } from "@/types/account";
 import useFetch from "@/hooks/useFetch";
 import { createAccount } from "@/lib/actions/account";
 
@@ -85,13 +85,18 @@ const CreateAccountDrawer = ({ children }: { children: React.ReactNode }) => {
 
   /**
    * - createAccountFn is the wrapped version of createAccount returned by useFetch.
-   * - It’s essentially the same as createAccount, but it also handles the loading, error, and data states.
+   * - It's essentially the same as createAccount, but it also handles the loading, error, and data states.
    * - When the user submits the form, onSubmit is triggered.
    * - It calls createAccountFn with the form data.
    * - createAccountFn executes createAccount and updates the loading, error, and data states.
    */
   const onSubmit = async (data: Account) => {
-    const result = await createAccountFn(data);
+    // Ensure balance is a string
+    const formData: AccountFormData = {
+      ...data,
+      balance: String(data.balance)
+    };
+    await createAccountFn(formData);
   };
 
   useEffect(() => {

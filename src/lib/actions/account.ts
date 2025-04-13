@@ -4,7 +4,9 @@ import { db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getUserFromAuth } from "./auth";
 import { serialize } from "./serialize";
-import { Account } from "@/types/account";
+import type { Prisma } from "@prisma/client";
+import { AccountFormData, AccountType } from "@/types/account";
+import { createCacheKey, invalidateCache, getCache, setCache } from "@/lib/cache";
 
 export const validateBalance = async (balance: string) => {
   const balanceFloat = parseFloat(balance);
@@ -33,12 +35,8 @@ export const setDefaultAccount = async (
 ) => {
   if (!shouldBeDefault || !accountId) return; // No need to change anything
 
-  // Log inputs for debugging
-  console.log("accountId:", accountId);
-  console.log("userId:", userId);
-
   try {
-    return await db.$transaction(async (prisma) => {
+    return await db.$transaction(async (prisma: Prisma.TransactionClient) => {
       // Unset previous default account
       await prisma.account.updateMany({
         where: { userId, NOT: { id: accountId }, isDefault: true },
@@ -52,7 +50,6 @@ export const setDefaultAccount = async (
       });
     });
   } catch (error) {
-    console.error("Transaction failed:", error);
     throw error; // Re-throw the error for the caller to handle
   }
 };
@@ -66,6 +63,9 @@ export const toggleDefaultAccount = async (accountId: string) => {
 
     if (!account) throw new Error("Failed to set default account");
 
+    // Invalidate the accounts cache for this user
+    await invalidateCache(createCacheKey(user.id, "accounts"));
+    
     revalidatePath("/dashboard");
     return { success: true, data: await serialize(account) };
   } catch (error) {
@@ -104,6 +104,40 @@ export const getAccountWithTransactions = async (accountId: string) => {
   }
 };
 
+// Cached version of getUserAccounts - using the better manual implementation instead
+export const getUserAccounts = async () => {
+  return getUserAccountsCached();
+};
+
+// Better implementation that handles caching manually for async key generation
+export const getUserAccountsCached = async () => {
+  try {
+    const user = await getUserFromAuth();
+    
+    // Create a proper cache key with the user ID
+    const cacheKey = createCacheKey(user.id, "accounts");
+    
+    // Try to get from cache first
+    const cachedAccounts = await getCache(cacheKey);
+    if (cachedAccounts) {
+      return cachedAccounts;
+    }
+    
+    // If not in cache, get from DB
+    const accounts = await getUserAccountsFromDb(user.id);
+    const serializedAccounts = await Promise.all(
+      accounts.map(async (account) => await serialize(account))
+    );
+    
+    // Cache the result for 5 minutes
+    await setCache(cacheKey, serializedAccounts, 300);
+    
+    return serializedAccounts;
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
 /**
  * - createAccount is an asynchronous function that handles the logic for creating a new account.
  * - It interacts with our database using Prisma and performs operations like:
@@ -113,43 +147,18 @@ export const getAccountWithTransactions = async (accountId: string) => {
  *    - Creating the account in the database.
  *    - It returns a response indicating success or failure.
  */
-export const createAccount = async (data: Account) => {
+export const createAccount = async (data: AccountFormData) => {
   try {
     const user = await getUserFromAuth();
     const balanceFloat = await validateBalance(data.balance);
 
     const existingAccounts = await getUserAccountsFromDb(user.id);
-    const shouldBeDefault = existingAccounts.length === 0 || data.isDefault;
-
-    // const account = await db.$transaction(async (prisma) => {
-    //   // Create a new account
-    //   const newAccount = await prisma.account.create({
-    //     data: {
-    //       ...data,
-    //       balance: balanceFloat,
-    //       userId: user.id,
-    //       isDefault: shouldBeDefault,
-    //     },
-    //   });
-
-    //   console.log("New account created:", newAccount);
-
-    //   // Set as default if necessary
-    //   try {
-    //     if (shouldBeDefault) {
-    //       await setDefaultAccount(user.id, true, newAccount.id);
-    //     }
-    //   } catch (error) {
-    //     console.error("Failed to set default account:", error);
-    //     throw new Error("Account created, but failed to set as default.");
-    //   }
-
-    //   return newAccount;
-    // });
+    const shouldBeDefault = existingAccounts.length === 0 || Boolean(data.isDefault);
 
     const account = await db.account.create({
       data: {
-        ...data,
+        name: data.name,
+        type: data.type as AccountType,
         balance: balanceFloat,
         userId: user.id,
         isDefault: shouldBeDefault,
@@ -160,6 +169,9 @@ export const createAccount = async (data: Account) => {
       await setDefaultAccount(user.id, true, account.id);
     }
 
+    // Invalidate the accounts cache for this user
+    await invalidateCache(createCacheKey(user.id, "accounts"));
+    
     revalidatePath("/dashboard");
     return { success: true, data: await serialize(account) };
   } catch (error) {
@@ -167,19 +179,6 @@ export const createAccount = async (data: Account) => {
       success: false,
       error: error.message || "Failed to create account",
     };
-  }
-};
-
-export const getUserAccounts = async () => {
-  try {
-    const user = await getUserFromAuth();
-    const accounts = await getUserAccountsFromDb(user.id);
-
-    return await Promise.all(
-      accounts.map(async (account) => await serialize(account))
-    );
-  } catch (error) {
-    return { success: false, error: error.message };
   }
 };
 
@@ -198,19 +197,19 @@ export const bulkDeleteTransactions = async (transactionIds: string[]) => {
     // Group transactions by account to update balances
     const accountBalanceChanges = transactions.reduce(
       (acc: Record<string, number>, transaction) => {
-        const change =
-          transaction.type === "EXPENSE"
-            ? transaction.amount
-            : -transaction.amount;
-        acc[transaction.accountId] =
-          (acc[transaction.accountId] || 0) + Number(change);
+        const amount = typeof transaction.amount === 'object' && transaction.amount !== null && 'toNumber' in transaction.amount 
+          ? transaction.amount.toNumber() 
+          : Number(transaction.amount);
+          
+        const change = transaction.type === "EXPENSE" ? amount : -amount;
+        acc[transaction.accountId] = (acc[transaction.accountId] || 0) + change;
         return acc;
       },
-      {}
+      {} as Record<string, number>
     );
 
     // Delete transactions and update account balances in a transaction
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
       // Delete transactions
       await tx.transaction.deleteMany({
         where: {

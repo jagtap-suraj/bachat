@@ -16,7 +16,6 @@ import BarLoader from "react-spinners/BarLoader";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -162,7 +161,9 @@ const TransactionTable = ({
    * 3. If it is not, add it to the array (select).
    * 4. Update the selectedIds state, which triggers a re-render to reflect the selection.
    */
-  const handleSelect = (id: string) => {
+  const handleSelect = (id: string | undefined) => {
+    if (!id) return; // Skip if id is undefined
+    
     setSelectedIds((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
@@ -182,7 +183,7 @@ const TransactionTable = ({
     setSelectedIds((current) =>
       current.length === paginatedTransactions.length
         ? []
-        : paginatedTransactions.map((t) => t.id)
+        : paginatedTransactions.filter(t => t.id !== undefined).map((t) => t.id as string)
     );
   };
 
@@ -198,7 +199,6 @@ const TransactionTable = ({
   const {
     loading: deleteLoading,
     fn: deleteFn,
-    data: deleted,
   } = useFetch(bulkDeleteTransactions);
 
   /**
@@ -444,7 +444,7 @@ const TransactionTable = ({
                   {/* Checkbox for Selecting the Transaction */}
                   <TableCell>
                     <Checkbox
-                      checked={selectedIds.includes(transaction.id)}
+                      checked={transaction.id ? selectedIds.includes(transaction.id) : false}
                       onCheckedChange={() => handleSelect(transaction.id)}
                     />
                   </TableCell>
@@ -541,7 +541,7 @@ const TransactionTable = ({
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => deleteFn([transaction.id])}
+                          onClick={() => transaction.id && deleteFn([transaction.id])}
                         >
                           Delete
                         </DropdownMenuItem>

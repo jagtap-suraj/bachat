@@ -1,10 +1,11 @@
 "use server";
 
 import { db } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { subDays } from "date-fns";
 
-const ACCOUNT_ID = "0c8486ab-30df-4b7b-977c-73beb97bc689";
-const USER_ID = "7327159c-de90-48db-b270-938b3c199c59";
+const ACCOUNT_ID = "23d807a9-f86e-4a12-9831-76886f3b4fb6";
+const USER_ID = "06669c28-f27a-420c-b73f-9044ac42a7b3";
 
 // Categories with their typical amount ranges
 const CATEGORIES = {
@@ -41,11 +42,29 @@ const getRandomCategory = (type: "INCOME" | "EXPENSE") => {
   return { category: category.name, amount };
 };
 
+// Define TransactionSeedData interface
+interface TransactionSeedData {
+  id: string;
+  type: "INCOME" | "EXPENSE";
+  amount: number;
+  description: string;
+  date: Date;
+  category: string;
+  status: "COMPLETED";
+  userId: string;
+  accountId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export const seedTransactions = async () => {
   try {
     // Generate 90 days of transactions
-    const transactions: any[] = [];
-    let totalBalance = 0;
+    const transactions: TransactionSeedData[] = [];
+    
+    // Start with an initial positive balance to prevent going negative
+    const initialBalance = 10000; // $10,000 initial balance
+    let totalBalance = initialBalance;
 
     for (let i = 90; i >= 0; i--) {
       const date = subDays(new Date(), i);
@@ -57,10 +76,15 @@ export const seedTransactions = async () => {
         // 40% chance of income, 60% chance of expense
         const type = Math.random() < 0.4 ? "INCOME" : "EXPENSE";
         const { category, amount } = getRandomCategory(type);
+        
+        // Skip this expense if it would make the balance negative
+        if (type === "EXPENSE" && totalBalance - amount < 0) {
+          continue;
+        }
 
-        const transaction = {
+        const transaction: TransactionSeedData = {
           id: crypto.randomUUID(),
-          type,
+          type: type as "INCOME" | "EXPENSE",
           amount,
           description: `${
             type === "INCOME" ? "Received" : "Paid for"
@@ -80,7 +104,7 @@ export const seedTransactions = async () => {
     }
 
     // Insert transactions in batches and update account balance
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
       // Clear existing transactions
       await tx.transaction.deleteMany({
         where: { accountId: ACCOUNT_ID },
@@ -91,7 +115,7 @@ export const seedTransactions = async () => {
         data: transactions,
       });
 
-      // Update account balance
+      // Update account balance with our final calculated balance
       await tx.account.update({
         where: { id: ACCOUNT_ID },
         data: { balance: totalBalance },
@@ -100,7 +124,7 @@ export const seedTransactions = async () => {
 
     return {
       success: true,
-      message: `Created ${transactions.length} transactions`,
+      message: `Created ${transactions.length} transactions with final balance: $${totalBalance.toFixed(2)}`,
     };
   } catch (error) {
     console.error("Error seeding transactions:", error);

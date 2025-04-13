@@ -2,8 +2,9 @@ import { inngest } from "@/lib/inngest/client";
 import { db } from "@/lib/prisma";
 import EmailTemplate from "../../../emails/template";
 import { sendEmail } from "@/lib/actions/sendEmail";
-import { RecurringInterval, Transaction } from "@/types/transaction";
+import { RecurringInterval } from "@/types/transaction";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Prisma } from "@prisma/client";
 
 type MonthlyReportDataStatsType = {
   totalExpenses: number;
@@ -183,7 +184,7 @@ export const processRecurringTransaction = inngest.createFunction(
       if (!transaction || !isTransactionDue(transaction)) return;
 
       // Create new transaction and update account balance in a transaction
-      await db.$transaction(async (tx) => {
+      await db.$transaction(async (tx: Prisma.TransactionClient) => {
         // Create new transaction
         await tx.transaction.create({
           data: {
@@ -341,9 +342,13 @@ export const getMonthlyStats = async (
       utilities: 0,
     },
   };
-
-  return transactions.reduce((stats, t) => {
-    const amount = t.amount.toNumber();
+  return transactions.reduce((stats: MonthlyReportDataStatsType, t) => {
+    const amount = typeof t.amount === 'string' 
+      ? parseFloat(t.amount) 
+      : typeof t.amount === 'object' && t.amount !== null && 'toNumber' in t.amount 
+        ? t.amount.toNumber() 
+        : Number(t.amount);
+        
     if (t.type === "EXPENSE") {
       stats.totalExpenses += amount;
       // Safely access the category property
@@ -363,8 +368,14 @@ export const isNewMonth = (lastAlertDate: Date, currentDate: Date) => {
   );
 };
 
-// Utility functions
-export const isTransactionDue = (transaction: any) => {
+// Create an interface for the minimum transaction properties needed
+interface TransactionWithDates {
+  lastProcessed: Date | null;
+  nextRecurringDate?: Date | null;
+}
+
+// Update the isTransactionDue function to use this interface
+export const isTransactionDue = (transaction: TransactionWithDates) => {
   // If no lastProcessed date, transaction is due
   if (!transaction.lastProcessed) return true;
 

@@ -1,7 +1,6 @@
 import {
   SignedOut,
   SignInButton,
-  SignUpButton,
   SignedIn,
   UserButton,
 } from "@clerk/nextjs";
@@ -18,8 +17,8 @@ const Header = async () => {
       <nav className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/">
           <Image
-            src={"/logo2.png"}
-            alt="Welth Logo"
+            src={"/logo.png"}
+            alt="Bachat Logo"
             width={200}
             height={60}
             className="h-12 w-auto object-contain"

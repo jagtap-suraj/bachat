@@ -27,7 +27,17 @@ export default function RootLayout({
 
           <footer className="bg-blue-50 py-12">
             <div className="container mx-auto px-4 text-center text-gray-600">
-              <p>Made with 💗 by Suraj</p>
+              <p>
+                © {new Date().getFullYear()} Bachat | 
+                <a 
+                  href="https://github.com/jagtap-suraj/bachat" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="ml-2 text-blue-600 hover:underline"
+                >
+                  GitHub
+                </a>
+              </p>
             </div>
           </footer>
         </body>

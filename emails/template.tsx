@@ -115,6 +115,139 @@ const styles: { [key: string]: CSSProperties } = {
 export type MonthlyReportDataType = typeof PREVIEW_DATA.monthlyReport.data;
 export type BudgetAlertDataType = typeof PREVIEW_DATA.budgetAlert.data;
 
+// Component for the stat item
+const StatItem = ({ label, value }: { label: string; value: string | number }) => (
+  <div style={styles.stat}>
+    <Text style={styles.text}>{label}</Text>
+    <Text style={styles.heading}>{value}</Text>
+  </div>
+);
+
+// Component for category breakdown rows
+const CategoryRow = ({ category, amount }: { category: string; amount: number }) => (
+  <div key={category} style={styles.row}>
+    <Text style={styles.text}>{category}</Text>
+    <Text style={styles.text}>${amount}</Text>
+  </div>
+);
+
+// Component for insights
+const InsightsList = ({ insights }: { insights: string[] }) => (
+  <Section style={styles.section}>
+    <Heading style={styles.heading}>Bachat Insights</Heading>
+    {insights.map((insight, index) => (
+      <Text key={index} style={styles.text}>
+        • {insight}
+      </Text>
+    ))}
+  </Section>
+);
+
+// Monthly Report Email Component
+const MonthlyReportEmail = ({ 
+  userName, 
+  data 
+}: { 
+  userName: string | null; 
+  data: MonthlyReportDataType 
+}) => (
+  <Html>
+    <Head />
+    <Preview>Your Monthly Financial Report</Preview>
+    <Body style={styles.body}>
+      <Container style={styles.container}>
+        <Heading style={styles.title}>Monthly Financial Report</Heading>
+
+        <Text style={styles.text}>Hello {userName},</Text>
+        <Text style={styles.text}>
+          Here&rsquo;s your financial summary for {data?.month}:
+        </Text>
+
+        {/* Main Stats */}
+        <Section style={styles.statsContainer}>
+          <StatItem label="Total Income" value={`$${data?.stats?.totalIncome}`} />
+          <StatItem label="Total Expenses" value={`$${data?.stats?.totalExpenses}`} />
+          <StatItem 
+            label="Net" 
+            value={`$${(data?.stats?.totalIncome ?? 0) - (data?.stats?.totalExpenses ?? 0)}`} 
+          />
+        </Section>
+
+        {/* Category Breakdown */}
+        {data?.stats?.byCategory && (
+          <Section style={styles.section}>
+            <Heading style={styles.heading}>Expenses by Category</Heading>
+            {Object.entries(data?.stats?.byCategory).map(
+              ([category, amount]) => (
+                <CategoryRow key={category} category={category} amount={amount} />
+              )
+            )}
+          </Section>
+        )}
+
+        {/* AI Insights */}
+        {data?.insights && <InsightsList insights={data.insights} />}
+
+        <Text style={styles.footer}>
+          Thank you for using Bachat. Keep tracking your finances for better
+          financial health!
+        </Text>
+      </Container>
+    </Body>
+  </Html>
+);
+
+// Budget Alert Email Component
+const BudgetAlertEmail = ({ 
+  userName, 
+  data 
+}: { 
+  userName: string | null; 
+  data: BudgetAlertDataType 
+}) => (
+  <Html>
+    <Head />
+    <Preview>Budget Alert</Preview>
+    <Body style={styles.body}>
+      <Container style={styles.container}>
+        <Heading style={styles.title}>Budget Alert</Heading>
+        <Text style={styles.text}>Hello {userName},</Text>
+        <Text style={styles.text}>
+          You&rsquo;ve used {data?.percentageUsed.toFixed(1)}% of your
+          monthly budget.
+        </Text>
+        <Section style={styles.statsContainer}>
+          <StatItem label="Budget Amount" value={`$${data?.budgetAmount}`} />
+          <StatItem label="Spent So Far" value={`$${data?.totalExpenses}`} />
+          <StatItem 
+            label="Remaining" 
+            value={`$${(data?.budgetAmount ?? 0) - (data?.totalExpenses ?? 0)}`} 
+          />
+        </Section>
+      </Container>
+    </Body>
+  </Html>
+);
+
+// Fallback Email Component
+const FallbackEmail = ({ userName }: { userName: string | null }) => (
+  <Html>
+    <Head />
+    <Preview>Email Preview</Preview>
+    <Body style={styles.body}>
+      <Container style={styles.container}>
+        <Heading style={styles.title}>Email Preview</Heading>
+        <Text style={styles.text}>
+          {userName ? `Hello ${userName},` : "Hello,"}
+        </Text>
+        <Text style={styles.text}>
+          The email content could not be displayed.
+        </Text>
+      </Container>
+    </Body>
+  </Html>
+);
+
 export default function EmailTemplate({
   userName = "",
   type = "monthly-report",
@@ -124,139 +257,30 @@ export default function EmailTemplate({
   type?: string;
   data?: MonthlyReportDataType | BudgetAlertDataType | null;
 }) {
-  console.log("From email template");
-  console.table({ userName, type, data });
   if (type === "monthly-report" && isMonthlyReportData(data)) {
-    return (
-      <Html>
-        <Head />
-        <Preview>Your Monthly Financial Report</Preview>
-        <Body style={styles.body}>
-          <Container style={styles.container}>
-            <Heading style={styles.title}>Monthly Financial Report</Heading>
-
-            <Text style={styles.text}>Hello {userName},</Text>
-            <Text style={styles.text}>
-              Here&rsquo;s your financial summary for {data?.month}:
-            </Text>
-
-            {/* Main Stats */}
-            <Section style={styles.statsContainer}>
-              <div style={styles.stat}>
-                <Text style={styles.text}>Total Income</Text>
-                <Text style={styles.heading}>${data?.stats?.totalIncome}</Text>
-              </div>
-              <div style={styles.stat}>
-                <Text style={styles.text}>Total Expenses</Text>
-                <Text style={styles.heading}>
-                  ${data?.stats?.totalExpenses}
-                </Text>
-              </div>
-              <div style={styles.stat}>
-                <Text style={styles.text}>Net</Text>
-                <Text style={styles.heading}>
-                  $
-                  {(data?.stats?.totalIncome ?? 0) -
-                    (data?.stats?.totalExpenses ?? 0)}
-                </Text>
-              </div>
-            </Section>
-
-            {/* Category Breakdown */}
-            {data?.stats?.byCategory && (
-              <Section style={styles.section}>
-                <Heading style={styles.heading}>Expenses by Category</Heading>
-                {Object.entries(data?.stats?.byCategory).map(
-                  ([category, amount]) => (
-                    <div key={category} style={styles.row}>
-                      <Text style={styles.text}>{category}</Text>
-                      <Text style={styles.text}>${amount}</Text>
-                    </div>
-                  )
-                )}
-              </Section>
-            )}
-
-            {/* AI Insights */}
-            {data?.insights && (
-              <Section style={styles.section}>
-                <Heading style={styles.heading}>Bachat Insights</Heading>
-                {data?.insights.map((insight, index) => (
-                  <Text key={index} style={styles.text}>
-                    • {insight}
-                  </Text>
-                ))}
-              </Section>
-            )}
-
-            <Text style={styles.footer}>
-              Thank you for using Bachat. Keep tracking your finances for better
-              financial health!
-            </Text>
-          </Container>
-        </Body>
-      </Html>
-    );
+    return <MonthlyReportEmail userName={userName} data={data} />;
   }
 
   if (type === "budget-alert" && isBudgetAlertData(data)) {
-    return (
-      <Html>
-        <Head />
-        <Preview>Budget Alert</Preview>
-        <Body style={styles.body}>
-          <Container style={styles.container}>
-            <Heading style={styles.title}>Budget Alert</Heading>
-            <Text style={styles.text}>Hello {userName},</Text>
-            <Text style={styles.text}>
-              You&rsquo;ve used {data?.percentageUsed.toFixed(1)}% of your
-              monthly budget.
-            </Text>
-            <Section style={styles.statsContainer}>
-              <div style={styles.stat}>
-                <Text style={styles.text}>Budget Amount</Text>
-                <Text style={styles.heading}>${data?.budgetAmount}</Text>
-              </div>
-              <div style={styles.stat}>
-                <Text style={styles.text}>Spent So Far</Text>
-                <Text style={styles.heading}>${data?.totalExpenses}</Text>
-              </div>
-              <div style={styles.stat}>
-                <Text style={styles.text}>Remaining</Text>
-                <Text style={styles.heading}>
-                  ${(data?.budgetAmount ?? 0) - (data?.totalExpenses ?? 0)}
-                </Text>
-              </div>
-            </Section>
-          </Container>
-        </Body>
-      </Html>
-    );
+    return <BudgetAlertEmail userName={userName} data={data} />;
   }
 
-  return (
-    <Html>
-      <Head />
-      <Preview>Email Preview</Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Heading style={styles.title}>Email Preview</Heading>
-          <Text style={styles.text}>
-            {userName ? `Hello ${userName},` : "Hello,"}
-          </Text>
-          <Text style={styles.text}>
-            The email content could not be displayed.
-          </Text>
-        </Container>
-      </Body>
-    </Html>
-  );
+  return <FallbackEmail userName={userName} />;
 }
 
+// Improved type guards for better type safety
 function isMonthlyReportData(data: any): data is MonthlyReportDataType {
-  return data && typeof data === "object" && "month" in data;
+  return data && 
+    typeof data === 'object' && 
+    'month' in data && 
+    'stats' in data && 
+    'insights' in data;
 }
 
 function isBudgetAlertData(data: any): data is BudgetAlertDataType {
-  return data && typeof data === "object" && "percentageUsed" in data;
+  return data && 
+    typeof data === 'object' && 
+    'percentageUsed' in data && 
+    'budgetAmount' in data &&
+    'totalExpenses' in data;
 }

@@ -83,8 +83,12 @@ const AccountChart = ({ transactions }: { transactions: Transaction[] }) => {
         }
 
         // Convert the transaction amount from string to number
-        // This is necessary because the Transaction type defines amount as string
-        const amount = parseFloat(transaction.amount);
+        // This is necessary because the Transaction type defines amount as string | number | Decimal
+        const amount = typeof transaction.amount === 'string' 
+          ? parseFloat(transaction.amount)
+          : typeof transaction.amount === 'object' && transaction.amount !== null && 'toNumber' in transaction.amount
+            ? transaction.amount.toNumber()
+            : Number(transaction.amount);
 
         // Add the amount to either income or expense based on transaction type
         if (transaction.type === TransactionType.INCOME) {
