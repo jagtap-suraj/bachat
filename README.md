@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bachat - Personal Finance Tracker
+
+Bachat is a comprehensive personal finance tracking application built with Next.js, Prisma, and TypeScript. Track your expenses, manage multiple accounts, set budgets, and visualize your financial journey with intuitive charts and dashboards.
+
+![Bachat Dashboard](/public/dashboard_screenshot.jpeg)
+
+## Features
+
+- **Multi-account Management**: Create and manage multiple financial accounts
+- **Transaction Tracking**: Log income and expenses with categories and descriptions
+- **Budget Planning**: Set monthly budgets and track your spending against them
+- **Visual Analytics**: View your financial data through intuitive charts and graphs
+- **Responsive Design**: Access your finances from any device with a fully responsive UI
+- **Secure Authentication**: User authentication powered by Clerk
+- **Performance Optimized**: Redis caching and rate limiting for blazing fast experience
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TailwindCSS
+- **Backend**: Next.js API routes, Prisma ORM
+- **Database**: PostgreSQL
+- **Authentication**: Clerk
+- **Performance**: Redis (Upstash) for caching and rate limiting
+- **Deployment**: Vercel
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 18+ and npm
+- PostgreSQL database
+- Clerk account for authentication
+- Upstash Redis (optional, for caching and rate limiting)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/jagtap-suraj/bachat.git
+   cd bachat
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Install dependencies:
+   ```bash
+   npm install --legacy-peer-deps
+   ```
 
-## Learn More
+3. Set up environment variables:
+   Create a `.env` file in the root directory and add the following:
+   ```
+   # Database
+   DATABASE_URL="postgresql://username:password@localhost:5432/bachat"
+   
+   # Clerk Authentication
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+   CLERK_SECRET_KEY=your_clerk_secret_key
+   
+   # Upstash Redis (Optional - for caching and rate limiting)
+   UPSTASH_REDIS_REST_URL=your_upstash_redis_url
+   UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_token
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+4. Run database migrations:
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-## Deploy on Vercel
+### Demo Data
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+To seed your database with sample transactions:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Update the USER_ID and ACCOUNT_ID in `src/lib/actions/seed.ts` to match your user's ID and account ID
+2. Visit `/api/seed` in your browser to generate 90 days of sample transactions
+
+## Test Credentials
+
+You can use these credentials to test the application:
+
+- **Email**: bachat@grr.la
+- **Password**: welth@bachat
+
+## Deployment
+
+The easiest way to deploy Bachat is using Vercel:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjagtap-suraj%2Fbachat)
+
+Make sure to set up the required environment variables in your Vercel project settings.
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## Acknowledgements
+
+- [Next.js](https://nextjs.org/)
+- [Prisma](https://prisma.io/)
+- [Clerk](https://clerk.dev/)
+- [Upstash](https://upstash.com/)
+- [shadcn/ui](https://ui.shadcn.com/)
